@@ -293,14 +293,14 @@ def get_all_counts():
             FROM "Tmhls.StorageReservation.ReservationStrategies.Configuration"
             GROUP BY project_name
         ''',
-        'Location Data Schemas': '''
+        'Location Metadata': '''
             SELECT project_name, COUNT(*) as count
             FROM "Tmhls.StorageLayout.LocationDataSchemas.Configuration"
             GROUP BY project_name
         ''',
-        'Load Data Schemas': '''
+        'Load Metadata': '''
             SELECT project_name, COUNT(*) as count
-            FROM "Tmhls.Inventory.LoadDataScemas.Configuration"
+            FROM "Tmhls.Inventory.LoadDataSchemas.Configuration"
             GROUP BY project_name
         ''',
         'Storage Areas': '''
@@ -387,16 +387,17 @@ def get_all_counts():
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
             <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.0.1/css/buttons.bootstrap5.min.css">
+            // Adjust the CSS styles
             <style>
-                body {{
-                    font-family: Arial, sans-serif;
-                    margin: 40px;
+                .dataTables_wrapper {{
+                    width: 100%;
                 }}
                 .table {{
                     width: 100%;
                     margin-bottom: 1rem;
                     color: #212529;
                 }}
+                
                 .table th,
                 .table td {{
                     padding: 0.75rem;
@@ -414,9 +415,8 @@ def get_all_counts():
                     color: red;
                     font-weight: bold;
                 }}
-                .dataTables_scrollBody {{
-                    overflow-y: hidden !important;
-                    max-height: 500px;
+                .container {{
+                    margin-left: 0px;
                 }}
             </style>
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -435,14 +435,11 @@ def get_all_counts():
                         "searching": true,
                         "ordering": true,
                         "info": true,
-                        "autoWidth": false,
                         "responsive": true,
                         "dom": 'Bfrtip',
                         "buttons": [
                             'copy', 'csv', 'excel', 'pdf', 'print'
                         ],
-                        "scrollX": true,  // Enable horizontal scrolling
-                        "scrollY": false, // Disable vertical scrolling
                         "footerCallback": function (row, data, start, end, display) {{
                             var api = this.api();
                             var xCounts = {x_counts_json};
