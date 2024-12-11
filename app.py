@@ -7,6 +7,7 @@ import sqlite3
 import os
 import json
 import glob
+import tempfile
 
 # Configure logging
 logging.basicConfig(
@@ -16,7 +17,10 @@ logging.basicConfig(
 )
 
 zip_dir = 'import'
-output_dir = 'extracted'
+# Create a temporary directory
+temp_dir = tempfile.TemporaryDirectory()
+output_dir = temp_dir.name
+
 
 def extract_zip(zip_path, extract_to):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -142,7 +146,6 @@ def clean_jsons(directory):
 
 def create_sqlite_tables():
     db_path = 'database.db'
-    extracted_dir = os.path.join('extracted')
     unwanted_substrings = ['tmhls', 'configuration']
 
     # Create the database file if it does not exist
@@ -162,8 +165,8 @@ def create_sqlite_tables():
 
     # Get all first-level subdirectories as project names
     project_names = [
-        name for name in os.listdir(extracted_dir)
-        if os.path.isdir(os.path.join(extracted_dir, name))
+        name for name in os.listdir(output_dir)
+        if os.path.isdir(os.path.join(output_dir, name))
     ]
 
     # Insert project names into the projects table
@@ -174,7 +177,7 @@ def create_sqlite_tables():
             pass  # Ignore duplicates
 
     # Process JSON files
-    json_files = glob.glob(os.path.join(extracted_dir, '**', '*.json'), recursive=True)
+    json_files = glob.glob(os.path.join(output_dir, '**', '*.json'), recursive=True)
 
     for file in json_files:
         with open(file, 'r', encoding='utf-8') as f:
@@ -186,7 +189,7 @@ def create_sqlite_tables():
                 table_name = table_name.replace(substr, '').strip()
             
             # Extract the first child folder as project_name
-            relative_path = os.path.relpath(file, extracted_dir)
+            relative_path = os.path.relpath(file, output_dir)
             parts = relative_path.split(os.sep)
             if len(parts) > 1:
                 project_name = parts[0]
@@ -247,16 +250,16 @@ def get_all_counts():
             FROM "Tmhls.VehicleType.Configuration"
             GROUP BY project_name
         ''',
-        'Kollmorgen Vehicles': '''
-            SELECT project_name, count(*) 
-            FROM "Vehicles" 
-            WHERE metadata like "%kollmorgen%" 
-            GROUP BY project_name
-        ''',
+        # 'Kollmorgen Vehicles': '''
+        #     SELECT project_name, count(*) 
+        #     FROM "Vehicles" 
+        #     WHERE metadata like "%kollmorgen%" 
+        #     GROUP BY project_name
+        # ''',
         'Shuttles': '''
             SELECT project_name, count(*) 
             FROM "Vehicles" 
-            WHERE metadata like "%EAB%" 
+            WHERE metadata like "%ip%"
             GROUP BY project_name
         ''',
         'PickUp Locations': '''
