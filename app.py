@@ -274,7 +274,7 @@ def get_all_counts():
         'Screens': '''
             SELECT project_name, COUNT(*) as count
             FROM "Tmhls.Screen.Configuration"
-            WHERE template = 0
+            WHERE template = "False"
             GROUP BY project_name
         ''',
         'IO Signals': '''
@@ -283,8 +283,9 @@ def get_all_counts():
             GROUP BY project_name
         ''',
         'Storage Locations': '''
-            SELECT project_name, COUNT(*)-1 as count
+            SELECT project_name, COUNT(*) as count
             FROM "Tmhls.StorageLayout.StorageLocations.Configuration"
+			WHERE length != "Integer"
             GROUP BY project_name
         ''',
         'Reservation Strategies': '''
@@ -430,7 +431,7 @@ def get_all_counts():
             <script>
                 $(document).ready(function() {{
                     var table = $('.table').DataTable({{
-                        "paging": true,
+                        "paging": false,
                         "searching": true,
                         "ordering": true,
                         "info": true,
