@@ -248,24 +248,24 @@ def get_all_counts():
             GROUP BY project_name
         ''',
         'Kollmorgen Vehicles': '''
-            SELECT project_name, COUNT(*) as count
-            FROM "Tmhls.VehicleType.Configuration"
-            WHERE Vendor == 'kollmorgen'
+            SELECT project_name, count(*) 
+            FROM "Vehicles" 
+            WHERE metadata like "%kollmorgen%" 
             GROUP BY project_name
         ''',
         'Shuttles': '''
-            SELECT project_name, COUNT(*) as count
-            FROM "Tmhls.VehicleType.Configuration"
-            WHERE Vendor == 'EAB'
+            SELECT project_name, count(*) 
+            FROM "Vehicles" 
+            WHERE metadata like "%EAB%" 
             GROUP BY project_name
         ''',
-        'PickUp Points': '''
+        'PickUp Locations': '''
             SELECT project_name, COUNT(*) as pickup_count
             FROM "Tmhls.Layout.Configuration"
-            WHERE Action = 'Pickup'
+            WHERE Action = 'PickUp'
             GROUP BY project_name
         ''',
-        'DropOff Points': '''
+        'DropOff Locations': '''
             SELECT project_name, COUNT(*) as dropoff_count
             FROM "Tmhls.Layout.Configuration"
             WHERE Action = 'DropOff'
@@ -283,7 +283,7 @@ def get_all_counts():
             GROUP BY project_name
         ''',
         'Storage Locations': '''
-            SELECT project_name, COUNT(*) as count
+            SELECT project_name, COUNT(*)-1 as count
             FROM "Tmhls.StorageLayout.StorageLocations.Configuration"
             GROUP BY project_name
         ''',
