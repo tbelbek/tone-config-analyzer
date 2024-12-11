@@ -335,6 +335,16 @@ def get_all_counts():
         table_name = query.split('FROM')[1].split('\n')[0].strip()
         cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name={table_name}")
         if cursor.fetchone():
+            # Fetch all distinct project names
+            cursor.execute(f"SELECT DISTINCT project_name FROM {table_name}")
+            all_project_names = [row[0] for row in cursor.fetchall()]
+        
+            # Initialize results with 0 for each project_name
+            for project_name in all_project_names:
+                if project_name not in results:
+                    results[project_name] = {}
+                results[project_name][key] = 0
+            
             cursor.execute(query)
             for row in cursor.fetchall():
                 project_name = row[0]
@@ -403,6 +413,10 @@ def get_all_counts():
                     color: red;
                     font-weight: bold;
                 }}
+                .dataTables_scrollBody {{
+                    overflow-y: hidden !important;
+                    max-height: 500px;
+                }}
             </style>
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
             <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
@@ -426,6 +440,8 @@ def get_all_counts():
                         "buttons": [
                             'copy', 'csv', 'excel', 'pdf', 'print'
                         ],
+                        "scrollX": true,  // Enable horizontal scrolling
+                        "scrollY": false, // Disable vertical scrolling
                         "footerCallback": function (row, data, start, end, display) {{
                             var api = this.api();
                             var xCounts = {x_counts_json};
