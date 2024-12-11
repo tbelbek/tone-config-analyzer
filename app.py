@@ -458,7 +458,7 @@ def get_all_counts():
         </head>
         <body>
             <div class="container">
-                <h2 class="my-4">Project Counts</h2>
+                <h2 class="my-4">Features List</h2>
                 {html}
             </div>
         </body>
