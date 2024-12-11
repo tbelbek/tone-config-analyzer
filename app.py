@@ -358,7 +358,7 @@ def get_all_counts():
     # Calculate the count of 'X' values in each column
     row_count = len(df)
     x_counts = (df == 'X').sum()
-    x_counts_formatted = (len(df) - x_counts.astype(str)) + f"/{row_count}"
+    x_counts_formatted = (row_count - x_counts).astype(str) + f"/{row_count}"
     x_counts_formatted['project_name'] = 'Feature usage'
 
     # Print the DataFrame to the console
