@@ -394,7 +394,8 @@ def get_all_counts():
     # Calculate the count of 'X' values in each column
     row_count = len(df)
     x_counts = (df == 'X').sum()
-    x_counts_formatted = (row_count - x_counts).astype(str) + f"/{row_count}"
+    usage_percent = ((row_count - x_counts) / row_count) * 100
+    x_counts_formatted = (row_count - x_counts).astype(str) + f"/{row_count}" + " (" + usage_percent.round(2).astype(str) + "%)"
     x_counts_formatted['Project Name'] = 'Usage'
 
     # Print the DataFrame to the console
