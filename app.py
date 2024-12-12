@@ -386,14 +386,14 @@ def get_all_counts():
     df.reset_index(inplace=True)
     df.rename(columns={'index': 'Project Name'}, inplace=True)  # Rename project_name to Project Name
 
-    # Convert all number fields to int and replace 0 with 'X'
+    # Convert all number fields to int and replace 0 with 'N/A'
     for col in df.columns:
         if col != 'Project Name':
-            df[col] = df[col].astype(int).replace(0, 'X')
+            df[col] = df[col].astype(int).replace(0, 'N/A')
 
-    # Calculate the count of 'X' values in each column
+    # Calculate the count of 'N/A' values in each column
     row_count = len(df)
-    x_counts = (df == 'X').sum()
+    x_counts = (df == 'N/A').sum()
     usage_percent = ((row_count - x_counts) / row_count) * 100
     x_counts_formatted = (row_count - x_counts).astype(str) + f"/{row_count}" + " (" + usage_percent.round(2).astype(str) + "%)"
     x_counts_formatted['Project Name'] = 'Usage'
@@ -408,7 +408,7 @@ def get_all_counts():
     x_counts_json = x_counts_formatted.to_json()
 
     # Calculate the total pickup and dropoff locations
-    df['Total PickUp and DropOff'] = df['PickUp Locations'].replace('X', 0).astype(int) + df['DropOff Locations'].replace('X', 0).astype(int)
+    df['Total PickUp and DropOff'] = df['PickUp Locations'].replace('N/A', 0).astype(int) + df['DropOff Locations'].replace('N/A', 0).astype(int)
 
     # Sort the data based on the total
     df_sorted = df.sort_values(by='Total PickUp and DropOff', ascending=True)
@@ -422,14 +422,14 @@ def get_all_counts():
     # Add stacked bar chart to subplot
     fig.add_trace(go.Bar(
         x=df_sorted['Project Name'],
-        y=df_sorted['PickUp Locations'].replace('X', 0).astype(int),
+        y=df_sorted['PickUp Locations'].replace('N/A', 0).astype(int),
         name='PickUp Locations',
         marker_color='rgb(55, 83, 109)'
     ), row=1, col=1)
 
     fig.add_trace(go.Bar(
         x=df_sorted['Project Name'],
-        y=df_sorted['DropOff Locations'].replace('X', 0).astype(int),
+        y=df_sorted['DropOff Locations'].replace('N/A', 0).astype(int),
         name='DropOff Locations',
         marker_color='rgb(26, 118, 255)'
     ), row=1, col=1)
@@ -551,7 +551,7 @@ def get_all_counts():
     """
 
     # Save the HTML to a file or serve it in your web application
-    with open('project_counts.html', 'w', encoding='utf-8') as f:
+    with open('report.html', 'w', encoding='utf-8') as f:
         f.write(html)
 
 # Initial extraction
