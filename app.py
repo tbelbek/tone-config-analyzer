@@ -8,6 +8,13 @@ import os
 import json
 import glob
 import tempfile
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
+import numpy as np
+from scipy.stats import norm
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # Configure logging
 logging.basicConfig(
@@ -29,6 +36,7 @@ def extract_zip(zip_path, extract_to):
 
 for zip_file in os.listdir(zip_dir):
     if zip_file.endswith('.zip'):
+        logging.info(f'Processing: {zip_file}')
         folder_name = os.path.splitext(zip_file)[0]
         extract_path = os.path.join(output_dir, folder_name)
         os.makedirs(extract_path, exist_ok=True)
@@ -126,7 +134,7 @@ def clean_json_fields(input_file, output_file, fields_to_remove):
         cleaned_data = remove_empty_fields(data)
 
     if not cleaned_data:
-        print(f'ℹ️ {input_file} has no meaningful data after cleaning. Skipping creating cleaned file.')
+        logging.info(f'{input_file} has no meaningful data after cleaning. Skipping creating cleaned file.')
         return False
 
     try:
@@ -183,6 +191,10 @@ def create_sqlite_tables():
         with open(file, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
+        keylist = ['SsioList']
+        if isinstance(data, dict) and any(key in data for key in keylist):
+            data = flatten_if_contains_keys(data)        
+        
         if isinstance(data, list) and len(data) > 0:
             table_name = os.path.splitext(os.path.basename(file))[0]
             for substr in unwanted_substrings:
@@ -234,6 +246,16 @@ def create_sqlite_tables():
 
     conn.commit()
     conn.close()
+
+def flatten_if_contains_keys(data):    
+    flattened_list = []
+    if isinstance(data, dict):
+        for main_key, items in data.items():
+            if isinstance(items, list):
+                for item in items:
+                    item['MainKey'] = main_key
+                    flattened_list.append(item)
+    return flattened_list
 
 def get_all_counts():
     conn = sqlite3.connect('database.db')
@@ -362,21 +384,21 @@ def get_all_counts():
     # Convert results to a DataFrame
     df = pd.DataFrame.from_dict(results, orient='index').fillna(0)
     df.reset_index(inplace=True)
-    df.rename(columns={'index': 'project_name'}, inplace=True)
+    df.rename(columns={'index': 'Project Name'}, inplace=True)  # Rename project_name to Project Name
 
     # Convert all number fields to int and replace 0 with 'X'
     for col in df.columns:
-        if col != 'project_name':
+        if col != 'Project Name':
             df[col] = df[col].astype(int).replace(0, 'X')
 
     # Calculate the count of 'X' values in each column
     row_count = len(df)
     x_counts = (df == 'X').sum()
     x_counts_formatted = (row_count - x_counts).astype(str) + f"/{row_count}"
-    x_counts_formatted['project_name'] = 'Feature usage'
+    x_counts_formatted['Project Name'] = 'Usage'
 
     # Print the DataFrame to the console
-    print(df)
+    logging.info(df)
 
     # Create a fancy HTML table
     html = df.to_html(classes='table table-striped table-hover', index=False)
@@ -384,6 +406,55 @@ def get_all_counts():
 
     x_counts_json = x_counts_formatted.to_json()
 
+    # Calculate the total pickup and dropoff locations
+    df['Total PickUp and DropOff'] = df['PickUp Locations'].replace('X', 0).astype(int) + df['DropOff Locations'].replace('X', 0).astype(int)
+
+    # Sort the data based on the total
+    df_sorted = df.sort_values(by='Total PickUp and DropOff', ascending=True)
+
+    fig = make_subplots(
+        rows=1, cols=2,
+        column_widths=[0.5, 0.5],
+        specs=[[{"type": "bar"}, {"type": "scatter"}]]
+    )
+
+    # Add stacked bar chart to subplot
+    fig.add_trace(go.Bar(
+        x=df_sorted['Project Name'],
+        y=df_sorted['PickUp Locations'].replace('X', 0).astype(int),
+        name='PickUp Locations',
+        marker_color='rgb(55, 83, 109)'
+    ), row=1, col=1)
+
+    fig.add_trace(go.Bar(
+        x=df_sorted['Project Name'],
+        y=df_sorted['DropOff Locations'].replace('X', 0).astype(int),
+        name='DropOff Locations',
+        marker_color='rgb(26, 118, 255)'
+    ), row=1, col=1)
+
+    # Add scatter plot to subplot
+    fig.add_trace(go.Scatter(
+        x=df_sorted['Project Name'],
+        y=df_sorted['Total PickUp and DropOff'],
+        mode='markers',
+        marker=dict(size=15, color='rgb(255, 0, 0)'),
+        name='Total PickUp and DropOff'
+    ), row=1, col=2)
+
+    # Update layout for better visualization
+    fig.update_layout(
+        title='Total PickUp and DropOff Locations',
+        yaxis_title='Count',
+        barmode='stack',
+        height=400,  # Adjust the height as needed
+        margin=dict(l=50, r=50, t=50, b=50),  # Adjust margins as needed
+        showlegend=True
+    )
+
+    # Generate the HTML for the plot
+    plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+    
     html = f"""
     <html>
         <head>
@@ -398,13 +469,13 @@ def get_all_counts():
                     width: 100%;
                     margin-bottom: 1rem;
                     color: #212529;
-                }}
-                
+                }}                
                 .table th,
                 .table td {{
                     padding: 0.75rem;
                     vertical-align: top;
                     border-top: 1px solid #dee2e6;
+                    white-space: nowrap;
                 }}
                 .table thead th {{
                     vertical-align: bottom;
@@ -419,6 +490,9 @@ def get_all_counts():
                 }}
                 .container {{
                     margin-left: 0px;
+                }}
+                .dataTables_scrollBody {{
+                    overflow-y: hidden !important;
                 }}
             </style>
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -437,10 +511,12 @@ def get_all_counts():
                         "searching": true,
                         "ordering": true,
                         "info": true,
+                        "scrollX": true,
+                        "scrollY": false,
                         "responsive": true,
-                        "dom": 'Bfrtip',
+                        "dom": '<"d-flex justify-content-between"fB>rtip',
                         "buttons": [
-                            'copy', 'csv', 'excel', 'pdf', 'print'
+                            'copy', 'csv', 'excel', 'pdf', 'print', 'colvis'
                         ],
                         "footerCallback": function (row, data, start, end, display) {{
                             var api = this.api();
@@ -460,25 +536,43 @@ def get_all_counts():
             </script>
         </head>
         <body>
-            <div class="container">
-                <h2 class="my-4">Features List</h2>
-                {html}
+            <div class="container-fluid">
+                <h2 class="my-4">T-ONE Analyzer</h2>
+                <div class="row">
+                    {plot_html}
+                </div>
+                <div class="row">
+                    {html}
+                </div>
             </div>
         </body>
     </html>
     """
 
     # Save the HTML to a file or serve it in your web application
-    with open('project_counts.html', 'w') as f:
+    with open('project_counts.html', 'w', encoding='utf-8') as f:
         f.write(html)
 
 # Initial extraction
 # delete the db file if it exists
 if os.path.exists('database.db'):
+    logging.info('Removing existing database.db file.')
     os.remove('database.db')
+
+logging.info('Creating output directory if it does not exist.')
 os.makedirs(output_dir, exist_ok=True)
+
+logging.info('Extracting files recursively.')
 recursive_extract(output_dir)
+
+logging.info('Traversing and converting files.')
 traverse_and_convert(output_dir)
+
+logging.info('Cleaning JSON files.')
 clean_jsons(output_dir)
+
+logging.info('Creating SQLite tables.')
 create_sqlite_tables()
+
+logging.info('Getting all counts.')
 get_all_counts()
