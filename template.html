@@ -1,0 +1,92 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+        <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.0.1/css/buttons.bootstrap5.min.css">
+        <style>
+            .dataTables_wrapper {
+                width: 100%;
+            }
+            .table {
+                width: 100%;
+                margin-bottom: 1rem;
+                color: #212529;
+            }                
+            .table th,
+            .table td {
+                padding: 0.75rem;
+                vertical-align: top;
+                border-top: 1px solid #dee2e6;
+                white-space: nowrap;
+            }
+            .table thead th {
+                vertical-align: bottom;
+                border-bottom: 2px solid #dee2e6;
+            }
+            .table tbody + tbody {
+                border-top: 2px solid #dee2e6;
+            }
+            .red-cross {
+                color: red;
+                font-weight: bold;
+            }
+            .container {
+                margin-left: 0px;
+            }
+            .dataTables_scrollBody {
+                overflow-y: hidden !important;
+            }
+        </style>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/dataTables.buttons.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.bootstrap5.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.html5.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.print.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.colVis.min.js"></script>
+        <script>
+            $(document).ready(function() {
+                var table = $('.table').DataTable({
+                    "paging": false,
+                    "searching": true,
+                    "ordering": true,
+                    "info": true,
+                    "scrollX": true,
+                    "scrollY": false,
+                    "responsive": true,
+                    "dom": '<"d-flex justify-content-between"fB>rtip',
+                    "buttons": [
+                        'copy', 'csv', 'excel', 'pdf', 'print', 'colvis'
+                    ],
+                    "footerCallback": function (row, data, start, end, display) {
+                        var api = this.api();
+                        var xCounts = JSON.parse({{ x_counts_json | tojson }});
+                        var rowData = [];
+                        for (var key in xCounts) {
+                            rowData.push(xCounts[key]);
+                        }
+                        $(api.column(0).footer()).html('Feature usage');
+                        for (var i = 1; i < rowData.length; i++) {
+                            $(api.column(i).footer()).html(rowData[i]);
+                        }
+                    }
+                });
+                table.draw(false);
+            });
+        </script>
+    </head>
+    <body>
+        <div class="container-fluid">
+            <h2 class="my-4">T-ONE Analyzer</h2>
+            <div class="row">
+                {{ plot_html }}
+            </div>
+            <div class="row">
+                {{ table_html }}
+            </div>
+        </div>
+    </body>
+</html>
