@@ -16,9 +16,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import orjson
 import threading
 from rich.console import Console
-from rich.progress import Progress
-from rich.spinner import Spinner
-from rich.text import Text
 
 
 # Dictionary to store execution times
@@ -36,6 +33,15 @@ temp_dir = tempfile.TemporaryDirectory()
 output_dir = temp_dir.name
 
 def timeit(func):
+    """
+    Decorator to measure the execution time of a function.
+    
+    Args:
+        func (callable): The function to be timed.
+    
+    Returns:
+        callable: The wrapped function with timing.
+    """
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
@@ -47,11 +53,25 @@ def timeit(func):
 
 @timeit
 def extract_zip(zip_path, extract_to):
+    """
+    Extracts a ZIP file to the specified directory.
+    
+    Args:
+        zip_path (str): Path to the ZIP file.
+        extract_to (str): Directory where files will be extracted.
+    """
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(extract_to)
 
 @timeit
 def process_zip_files(zip_dir, output_dir):
+    """
+    Processes all ZIP files in a directory by extracting them.
+    
+    Args:
+        zip_dir (str): Directory containing ZIP files.
+        output_dir (str): Directory where files will be extracted.
+    """
     for zip_file in os.listdir(zip_dir):
         if zip_file.endswith('.zip'):
             logging.info(f'Processing: {zip_file}')
@@ -62,6 +82,12 @@ def process_zip_files(zip_dir, output_dir):
 
 @timeit
 def recursive_extract(directory):
+    """
+    Recursively extracts ZIP files in a directory and its subdirectories.
+    
+    Args:
+        directory (str): The root directory to start extraction.
+    """
     for root, dirs, files in os.walk(directory):
         for file in files:
             if file.endswith('.zip'):
@@ -76,18 +102,23 @@ def recursive_extract(directory):
 @timeit
 def convert_xlsx_to_json(xlsx_path, json_path):
     """
-    Convert a single .xlsx file to .json using multithreading to handle I/O operations.
+    Converts an Excel (.xlsx) file to JSON format using multithreading.
+    
+    Args:
+        xlsx_path (str): Path to the Excel file.
+        json_path (str): Path where the JSON file will be saved.
+    
+    Raises:
+        Exception: If conversion fails.
     """
     try:
         df = pd.read_excel(xlsx_path, engine='openpyxl', usecols=None, dtype=str, na_filter=False)
         
-        # Define a function to serialize and write JSON
         def serialize_and_write():
             json_bytes = orjson.dumps(df.to_dict(orient='records'), option=orjson.OPT_APPEND_NEWLINE)
             with open(json_path, 'wb') as f:
                 f.write(json_bytes)
         
-        # Create a thread for serialization and writing
         thread = threading.Thread(target=serialize_and_write)
         thread.start()
         thread.join()
@@ -98,6 +129,13 @@ def convert_xlsx_to_json(xlsx_path, json_path):
 
 @timeit
 def traverse_and_convert(directory, max_workers=4):
+    """
+    Traverses a directory to find and convert all Excel files to JSON concurrently.
+    
+    Args:
+        directory (str): The root directory to traverse.
+        max_workers (int, optional): Maximum number of worker threads. Defaults to 4.
+    """
     def process_file(file_path):
         try:
             json_filename = os.path.splitext(file_path)[0] + '.json'
@@ -119,10 +157,19 @@ def traverse_and_convert(directory, max_workers=4):
                     futures.append(executor.submit(process_file, xlsx_path))
         
         for future in as_completed(futures):
-            future.result()  # To raise exceptions if any
+            future.result()
 
 @timeit
 def remove_empty_fields(data):
+    """
+    Recursively removes empty fields from a dictionary or list.
+    
+    Args:
+        data (dict or list): The data structure to clean.
+    
+    Returns:
+        dict or list: The cleaned data structure.
+    """
     if isinstance(data, dict):
         return {k: remove_empty_fields(v) for k, v in data.items() if v not in [None, {}, [], ""]}
     elif isinstance(data, list):
@@ -133,6 +180,17 @@ def remove_empty_fields(data):
 
 @timeit
 def clean_json_fields(input_file, output_file, fields_to_remove):
+    """
+    Cleans specified fields from a JSON file and removes empty entries.
+    
+    Args:
+        input_file (str): Path to the input JSON file.
+        output_file (str): Path to save the cleaned JSON file.
+        fields_to_remove (list): List of field names to remove.
+    
+    Returns:
+        bool: True if cleaning was successful, False otherwise.
+    """
     try:
         with open(input_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -176,6 +234,12 @@ def clean_json_fields(input_file, output_file, fields_to_remove):
 
 @timeit
 def clean_jsons(directory):
+    """
+    Cleans JSON files in a directory by removing specified fields.
+    
+    Args:
+        directory (str): The root directory containing JSON files.
+    """
     fields_to_remove = ['css', 'html', 'js']
     for root, dirs, files in os.walk(directory):
         for file in files:
@@ -185,6 +249,9 @@ def clean_jsons(directory):
 
 @timeit
 def create_sqlite_tables():
+    """
+    Creates SQLite tables from JSON files and populates them with data.
+    """
     db_path = 'database.db'
     unwanted_substrings = ['tmhls', 'configuration']
 
@@ -265,6 +332,15 @@ def create_sqlite_tables():
 
 @timeit
 def flatten_if_contains_keys(data):    
+    """
+    Flattens a nested dictionary if it contains specific keys.
+    
+    Args:
+        data (dict): The dictionary to check and flatten.
+    
+    Returns:
+        list: A flattened list of dictionaries.
+    """
     flattened_list = []
     if isinstance(data, dict):
         for main_key, items in data.items():
@@ -276,6 +352,16 @@ def flatten_if_contains_keys(data):
 
 @timeit
 def table_exists(cursor, table_name):
+    """
+    Checks if a table exists in the SQLite database.
+    
+    Args:
+        cursor (sqlite3.Cursor): The database cursor.
+        table_name (str): The name of the table to check.
+    
+    Returns:
+        bool: True if the table exists, False otherwise.
+    """
     cursor.execute("""
         SELECT name FROM sqlite_master 
         WHERE type='table' AND name=?
@@ -284,11 +370,31 @@ def table_exists(cursor, table_name):
 
 @timeit
 def execute_query(cursor, query):
+    """
+    Executes a SQL query and fetches all results.
+    
+    Args:
+        cursor (sqlite3.Cursor): The database cursor.
+        query (str): The SQL query to execute.
+    
+    Returns:
+        list: Query results.
+    """
     cursor.execute(query)
     return cursor.fetchall()
 
 @timeit
 def fetch_all_counts(cursor, queries):
+    """
+    Fetches counts for multiple queries grouped by project name.
+    
+    Args:
+        cursor (sqlite3.Cursor): The database cursor.
+        queries (dict): Dictionary of query keys and SQL queries.
+    
+    Returns:
+        dict: Nested dictionary with counts per project.
+    """
     results = {}
     for key, query in queries.items():
         table_name = query.split('FROM')[1].split('\n')[0].strip().strip('"')
@@ -304,6 +410,15 @@ def fetch_all_counts(cursor, queries):
 
 @timeit
 def transform_to_dataframe(results):
+    """
+    Transforms the results dictionary into a pandas DataFrame.
+    
+    Args:
+        results (dict): Nested dictionary with counts per project.
+    
+    Returns:
+        pd.DataFrame: The transformed DataFrame.
+    """
     df = pd.DataFrame.from_dict(results, orient='index').fillna(0)
     df.reset_index(inplace=True)
     df.rename(columns={'index': 'Project Name'}, inplace=True)
@@ -314,6 +429,15 @@ def transform_to_dataframe(results):
 
 @timeit
 def calculate_usage(df):
+    """
+    Calculates usage statistics from the DataFrame.
+    
+    Args:
+        df (pd.DataFrame): The data frame with counts.
+    
+    Returns:
+        pd.Series: Formatted usage statistics.
+    """
     row_count = len(df)
     x_counts = (df == 'N/A').sum()
     usage_percent = ((row_count - x_counts) / row_count) * 100
@@ -323,6 +447,15 @@ def calculate_usage(df):
 
 @timeit
 def create_plots(df):
+    """
+    Creates Plotly plots based on the DataFrame.
+    
+    Args:
+        df (pd.DataFrame): The data frame with counts.
+    
+    Returns:
+        plotly.graph_objects.Figure: The generated plots.
+    """
     df['Total PickUp and DropOff'] = df['PickUp Locations'].replace('N/A', 0).astype(int) + df['DropOff Locations'].replace('N/A', 0).astype(int)
     df_sorted = df.sort_values(by='Total PickUp and DropOff', ascending=True)
 
@@ -367,6 +500,17 @@ def create_plots(df):
 
 @timeit
 def generate_html_report(df_table, x_counts_json, plot_html):
+    """
+    Generates an HTML report using a Jinja2 template.
+    
+    Args:
+        df_table (pd.DataFrame): Data table to include in the report.
+        x_counts_json (str): JSON string of usage counts.
+        plot_html (str): HTML string of the plots.
+    
+    Returns:
+        str: Path to the generated HTML report.
+    """
     env = Environment(loader=FileSystemLoader('.'))
     template = env.get_template('template.html')
     
@@ -381,22 +525,34 @@ def generate_html_report(df_table, x_counts_json, plot_html):
     return generate_report(html_content)
  
 def generate_report(html_content):
+    """
+    Saves the HTML content to a file and returns its path.
+    
+    Args:
+        html_content (str): The HTML content to save.
+    
+    Returns:
+        str: Absolute path to the saved report.
+    """
     report_filename = 'report.html'
     with open(report_filename, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
-    # Get the absolute path of the report file
     report_path = os.path.abspath(report_filename)
     
-    # Return the path of the report file
     return report_path 
  
 @timeit       
 def get_all_counts():
+    """
+    Retrieves all counts from the database and generates the report.
+    
+    Returns:
+        str: Path to the generated HTML report.
+    """
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     
-        # Define query configurations
     query_definitions = [
         {'key': 'Vehicles', 'table': 'Vehicles', 'condition': None},
         {'key': 'Vehicle Types', 'table': 'Tmhls.VehicleType.Configuration', 'condition': None},
@@ -416,7 +572,6 @@ def get_all_counts():
         {'key': 'Tables', 'table': 'Tables', 'condition': None},
     ]
     
-    # Dynamically generate the queries dictionary
     queries = {}
     for q in query_definitions:
         query = f'''
@@ -446,6 +601,12 @@ def get_all_counts():
 console = Console()
 
 def print_top_functions(n=5):
+    """
+    Prints the top functions by execution time.
+    
+    Args:
+        n (int, optional): Number of top functions to display. Defaults to 5.
+    """
     sorted_funcs = sorted(execution_times.items(), key=lambda x: x[1], reverse=True)
     console.log("[green]Execution time spent on:")
     for func, t in sorted_funcs[:n]:
@@ -453,6 +614,10 @@ def print_top_functions(n=5):
         
 @timeit
 def main():
+    """
+    Main function to orchestrate the workflow of processing ZIP and JSON files,
+    creating database tables, and generating reports.
+    """
     # Step 1: Remove existing database.db if it exists
     if os.path.exists('database.db'):
         with console.status("[bold red]Removing existing `database.db` file...", spinner="dots"):
